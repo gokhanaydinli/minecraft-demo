@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voxel Demo</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    #crosshair { position: absolute; top: 50%; left: 50%; width: 20px; height: 20px; pointer-events: none; }
+    #crosshair:before, #crosshair:after { content: ''; position: absolute; background: #fff; }
+    #crosshair:before { left: 50%; top: 0; width: 2px; height: 20px; margin-left: -1px; }
+    #crosshair:after { top: 50%; left: 0; width: 20px; height: 2px; margin-top: -1px; }
+    #hand { position: absolute; bottom: 10px; right: 10px; width: 64px; height: 64px; background-image: url('https://i.imgur.com/ybz0Z4U.png'); background-size: contain; pointer-events: none; }
+    #inventory { position: absolute; top: 10px; left: 10px; padding: 8px; background: rgba(0,0,0,0.5); color: #fff; font-family: sans-serif; }
+  </style>
+  <script type="importmap">
+  {"imports":{
+    "three":"https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js",
+    "PointerLockControls":"https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/controls/PointerLockControls.js"
+  }}
+  </script>
+</head>
+<body>
+  <div id="inventory">Wood: 0</div>
+  <div id="crosshair"></div>
+  <div id="hand"></div>
+<script type="module">
+import * as THREE from 'three';
+import { PointerLockControls } from 'PointerLockControls';
+
+// Scene, camera, renderer
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// Lighting
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+dirLight.position.set(5, 10, 7);
+scene.add(dirLight);
+
+// Inventory UI
+const inventory = { wood: 0 };
+const invDiv = document.getElementById('inventory');
+function updateInv() { invDiv.textContent = `Wood: ${inventory.wood}`; }
+
+// World generation
+const blockSize = 1;
+const geometry = new THREE.BoxGeometry(blockSize, blockSize, blockSize);
+const material = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+const blocks = [];
+const blockHP = new Map();
+const worldSize = 16;
+for(let x = -worldSize/2; x < worldSize/2; x++) {
+  for(let z = -worldSize/2; z < worldSize/2; z++) {
+    const height = Math.ceil(Math.random() * 3);
+    for(let y = 0; y < height; y++) {
+      const cube = new THREE.Mesh(geometry, material);
+      cube.position.set(x * blockSize, y * blockSize, z * blockSize);
+      scene.add(cube);
+      blocks.push(cube);
+      blockHP.set(cube.id, 5);
+    }
+  }
+}
+
+// Controls
+const controls = new PointerLockControls(camera, document.body);
+scene.add(controls.getObject());
+document.body.addEventListener('click', () => controls.lock());
+
+// Spawn on center
+let spawnY = blockSize;
+blocks.forEach(cube => {
+  if(Math.abs(cube.position.x) < blockSize/2 && Math.abs(cube.position.z) < blockSize/2) {
+    spawnY = Math.max(spawnY, cube.position.y + blockSize);
+  }
+});
+controls.getObject().position.set(0, spawnY, 0);
+
+// Movement and collision state
+const move = { forward: false, backward: false, left: false, right: false };
+let canJump = false;
+const velocity = new THREE.Vector3();
+const downRay = new THREE.Raycaster();
+
+// Input handling
+document.addEventListener('keydown', e => {
+  if(e.code === 'KeyW') move.forward = true;
+  if(e.code === 'KeyS') move.backward = true;
+  if(e.code === 'KeyA') move.left = true;
+  if(e.code === 'KeyD') move.right = true;
+  if(e.code === 'Space' && canJump) {
+    velocity.y = 10; // Zıplama hızını artırdım
+    canJump = false;
+  }
+  if(e.code === 'KeyH') placeBlock();
+});
+document.addEventListener('keyup', e => {
+  if(e.code === 'KeyW') move.forward = false;
+  if(e.code === 'KeyS') move.backward = false;
+  if(e.code === 'KeyA') move.left = false;
+  if(e.code === 'KeyD') move.right = false;
+});
+
+// Collision check
+function checkCollision(pos) {
+  for(const cube of blocks) {
+    const dx = Math.abs(pos.x - cube.position.x);
+    const dz = Math.abs(pos.z - cube.position.z);
+    const dy = pos.y - cube.position.y;
+    if(dx < blockSize*0.6 && dz < blockSize*0.6 && dy < blockSize && dy > -blockSize) return true;
+  }
+  return false;
+}
+
+// Block placement & mining
+const centerRay = new THREE.Raycaster();
+function placeBlock() {
+  if(!controls.isLocked) return;
+  centerRay.setFromCamera({x:0,y:0}, camera);
+  const hit = centerRay.intersectObjects(blocks)[0]; if(!hit) return;
+  const nm = new THREE.Matrix3().getNormalMatrix(hit.object.matrixWorld);
+  const wn = hit.face.normal.clone().applyMatrix3(nm).normalize();
+  const pos = hit.point.clone().add(wn.multiplyScalar(blockSize/2));
+  pos.divideScalar(blockSize).round().multiplyScalar(blockSize);
+  const cube = new THREE.Mesh(geometry, material);
+  cube.position.copy(pos);
+  scene.add(cube);
+  blocks.push(cube);
+  blockHP.set(cube.id, 5);
+  const p = controls.getObject().position;
+  if(Math.abs(pos.x-p.x) < blockSize/2 && Math.abs(pos.z-p.z) < blockSize/2 && pos.y < p.y) p.y += blockSize;
+}
+document.addEventListener('mousedown', e => {
+  if(!controls.isLocked) return;
+  centerRay.setFromCamera({x:0,y:0}, camera);
+  const hit = centerRay.intersectObjects(blocks)[0]; if(!hit) return;
+  if(e.button === 0) {
+    const cube = hit.object;
+    let hpCount = blockHP.get(cube.id) || 0;
+    hpCount--;
+    if(hpCount <= 0) {
+      scene.remove(cube);
+      blocks.splice(blocks.indexOf(cube), 1);
+      blockHP.delete(cube.id);
+      inventory.wood++;
+      updateInv();
+    } else {
+      blockHP.set(cube.id, hpCount);
+    }
+  } else if(e.button === 2) {
+    placeBlock();
+  }
+});
+window.addEventListener('contextmenu', e => e.preventDefault());
+
+// Animation loop
+const clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+  const delta = clock.getDelta();
+
+  // Gravity
+  velocity.y -= 20 * delta; // Yerçekimini güçlendirdim
+
+  // Player position update
+  const oldPos = controls.getObject().position.clone();
+  controls.getObject().position.y += velocity.y * delta;
+
+  // Ground check - Zemin kontrolü düzeltildi
+  downRay.ray.origin.copy(controls.getObject().position);
+  downRay.ray.origin.y -= 0.1; // Küçük bir offset ekleyerek ayakların altından kontrol et
+  downRay.ray.direction.set(0, -1, 0);
+
+  const intersects = downRay.intersectObjects(blocks);
+
+  // Oyuncu yerdeyse (küçük bir tolerans değeriyle)
+  if (intersects.length > 0 && intersects[0].distance < 1.1) {
+    if (velocity.y < 0) {
+      canJump = true;
+      velocity.y = 0;
+      controls.getObject().position.y = intersects[0].point.y + blockSize;
+    }
+  } else {
+    canJump = false;
+  }
+
+  // Horizontal movement
+  const speed = 5 * delta;
+
+  // Calculate movement direction
+  const direction = new THREE.Vector3();
+
+  if(move.forward || move.backward || move.left || move.right) {
+    if(move.forward) direction.z -= 1;
+    if(move.backward) direction.z += 1;
+    if(move.left) direction.x -= 1;
+    if(move.right) direction.x += 1;
+
+    direction.normalize();
+    direction.applyQuaternion(controls.getObject().quaternion);
+    direction.multiplyScalar(speed);
+
+    // Update position
+    controls.getObject().position.x += direction.x;
+    controls.getObject().position.z += direction.z;
+  }
+
+  // Collision check
+  if(checkCollision(controls.getObject().position)) {
+    controls.getObject().position.copy(oldPos);
+  }
+
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>
