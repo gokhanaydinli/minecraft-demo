@@ -12,6 +12,68 @@
     #crosshair:after { top: 50%; left: 0; width: 20px; height: 2px; margin-top: -1px; }
     #hand { position: absolute; bottom: 10px; right: 10px; width: 64px; height: 64px; background-image: url('https://i.imgur.com/ybz0Z4U.png'); background-size: contain; pointer-events: none; }
     #inventory { position: absolute; top: 10px; left: 10px; padding: 8px; background: rgba(0,0,0,0.5); color: #fff; font-family: sans-serif; }
+    #block-type { position: absolute; bottom: 10px; left: 10px; padding: 8px; background: rgba(0,0,0,0.5); color: #fff; font-family: sans-serif; }
+    
+    /* Envanter ekranı */
+    #inventory-screen {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 500px;
+      height: 300px;
+      background: rgba(0, 0, 0, 0.8);
+      border: 3px solid #333;
+      border-radius: 10px;
+      color: white;
+      font-family: sans-serif;
+      padding: 20px;
+      z-index: 100;
+    }
+    
+    .inventory-title {
+      text-align: center;
+      font-size: 24px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #555;
+      padding-bottom: 10px;
+    }
+    
+    .inventory-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px;
+      margin: 5px 0;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 5px;
+      font-size: 18px;
+    }
+    
+    .inventory-item:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    
+    .block-preview {
+      width: 30px;
+      height: 30px;
+      display: inline-block;
+      margin-right: 10px;
+      border: 1px solid #666;
+    }
+    
+    .wood-block { background-color: #996633; }
+    .stone-block { background-color: #888888; }
+    .close-button {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: none;
+      border: none;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+    }
   </style>
   <script type="importmap">
   {"imports":{
@@ -24,6 +86,24 @@
   <div id="inventory">Wood: 0 | Stone: 0</div>
   <div id="crosshair"></div>
   <div id="hand"></div>
+  <div id="block-type">Blok: <span id="current-block">Odun</span> (T ile değiştir)</div>
+  
+  <!-- Envanter ekranı -->
+  <div id="inventory-screen">
+    <button class="close-button">&times;</button>
+    <div class="inventory-title">Envanter</div>
+    <div class="inventory-items">
+      <div class="inventory-item">
+        <div><span class="block-preview wood-block"></span> Odun</div>
+        <div id="wood-count">0</div>
+      </div>
+      <div class="inventory-item">
+        <div><span class="block-preview stone-block"></span> Taş</div>
+        <div id="stone-count">0</div>
+      </div>
+    </div>
+  </div>
+  
 <script type="module">
 import * as THREE from 'three';
 import { PointerLockControls } from 'PointerLockControls';
@@ -60,7 +140,32 @@ scene.add(dirLight);
 // Inventory UI
 const inventory = { wood: 0, stone: 0 };
 const invDiv = document.getElementById('inventory');
-function updateInv() { invDiv.textContent = `Wood: ${inventory.wood} | Stone: ${inventory.stone}`; }
+const inventoryScreen = document.getElementById('inventory-screen');
+const woodCount = document.getElementById('wood-count');
+const stoneCount = document.getElementById('stone-count');
+let inventoryOpen = false;
+
+function updateInv() { 
+  invDiv.textContent = `Wood: ${inventory.wood} | Stone: ${inventory.stone}`; 
+  woodCount.textContent = inventory.wood;
+  stoneCount.textContent = inventory.stone;
+}
+
+function toggleInventory() {
+  inventoryOpen = !inventoryOpen;
+  
+  if (inventoryOpen) {
+    controls.unlock(); // Ekran kilidini aç
+    inventoryScreen.style.display = 'block';
+  } else {
+    inventoryScreen.style.display = 'none';
+  }
+}
+
+// Envanter ekranını kapatma düğmesi
+document.querySelector('.close-button').addEventListener('click', function() {
+  toggleInventory();
+});
 
 // Blok tipleri
 const blockTypes = {
@@ -122,6 +227,26 @@ for(let x = -worldSize/2; x < worldSize/2; x++) {
     createBlock('DIRT', x, -2.5, z);
     createBlock('STONE', x, -3.5, z);
     
+    // Taş kümesi ekle
+    if (Math.random() < 0.03 && Math.abs(x) > 5 && Math.abs(z) > 5) {
+      // Zemin seviyesinde taş blokları
+      const stoneHeight = 1 + Math.floor(Math.random() * 2);
+      for (let y = 0; y < stoneHeight; y++) {
+        createBlock('STONE', x, y - 1.5, z);
+      }
+      
+      // Etrafına rastgele taşlar ekle
+      for (let i = 0; i < 3; i++) {
+        const offsetX = Math.floor(Math.random() * 3) - 1;
+        const offsetZ = Math.floor(Math.random() * 3) - 1;
+        if (offsetX === 0 && offsetZ === 0) continue;
+        
+        if (Math.random() < 0.7) {
+          createBlock('STONE', x + offsetX, -1.5, z + offsetZ);
+        }
+      }
+    }
+    
     // Ağaç ekle
     if (Math.random() < 0.02 && Math.abs(x) > 8 && Math.abs(z) > 8) {
       const treeHeight = 4 + Math.floor(Math.random() * 3);
@@ -137,6 +262,28 @@ for(let x = -worldSize/2; x < worldSize/2; x++) {
             createBlock('LEAVES', x + lx, treeHeight - 1.5 + ly, z + lz);
           }
         }
+      }
+    }
+  }
+}
+
+// Ayrıca etrafta birkaç taş kümesi daha oluştur
+for (let i = 0; i < 20; i++) {
+  const x = Math.floor(Math.random() * worldSize) - worldSize/2;
+  const z = Math.floor(Math.random() * worldSize) - worldSize/2;
+  
+  // Taş kümesi
+  if (Math.abs(x) > 5 && Math.abs(z) > 5) {
+    const stoneClusterSize = 2 + Math.floor(Math.random() * 3);
+    
+    for (let j = 0; j < stoneClusterSize; j++) {
+      const offsetX = Math.floor(Math.random() * 3) - 1;
+      const offsetZ = Math.floor(Math.random() * 3) - 1;
+      
+      // Taş yüksekliği
+      const height = Math.floor(Math.random() * 2);
+      for (let y = 0; y <= height; y++) {
+        createBlock('STONE', x + offsetX, y - 1.5, z + offsetZ);
       }
     }
   }
@@ -277,8 +424,26 @@ const playerHitbox = new THREE.Mesh(
 );
 scene.add(playerHitbox);
 
+// Block type selection
+let currentBlockType = 'WOOD'; // Varsayılan blok tipi
+
 // Input handling
 document.addEventListener('keydown', e => {
+  if (e.code === 'KeyI') {
+    toggleInventory();
+    return;
+  }
+  
+  // Blok tipini değiştir
+  if (e.code === 'KeyT') {
+    currentBlockType = currentBlockType === 'WOOD' ? 'STONE' : 'WOOD';
+    document.getElementById('current-block').textContent = currentBlockType === 'WOOD' ? 'Odun' : 'Taş';
+    return;
+  }
+  
+  // Envanter açıkken diğer tuşları devre dışı bırak
+  if (inventoryOpen) return;
+  
   switch(e.code) {
     case 'KeyW':
     case 'ArrowUp':
@@ -362,8 +527,16 @@ function placeBlock() {
     return;
   }
   
-  // Defaults to wood blocks when placing
-  createBlock('WOOD', blockPos.x, blockPos.y, blockPos.z);
+  // Envanterde blok var mı kontrol et ve uygun blok tipini yerleştir
+  if (currentBlockType === 'STONE' && inventory.stone > 0) {
+    createBlock('STONE', blockPos.x, blockPos.y, blockPos.z);
+    inventory.stone--;
+    updateInv();
+  } else if (currentBlockType === 'WOOD' && inventory.wood > 0) {
+    createBlock('WOOD', blockPos.x, blockPos.y, blockPos.z);
+    inventory.wood--;
+    updateInv();
+  }
 }
 
 // Mouse controls
@@ -407,7 +580,7 @@ function animate() {
   requestAnimationFrame(animate);
   const delta = Math.min(clock.getDelta(), 0.1);
 
-  if (controls.isLocked) {
+  if (controls.isLocked && !inventoryOpen) {
     // Çok daha güçlü yerçekimi
     if (velocity.y > 0) {
       // Yükselirken normal yerçekimi
