@@ -13,7 +13,7 @@
     #hand { position: absolute; bottom: 10px; right: 10px; width: 64px; height: 64px; background-image: url('https://i.imgur.com/ybz0Z4U.png'); background-size: contain; pointer-events: none; }
     #inventory { position: absolute; top: 10px; left: 10px; padding: 8px; background: rgba(0,0,0,0.5); color: #fff; font-family: sans-serif; }
     #block-type { position: absolute; bottom: 10px; left: 10px; padding: 8px; background: rgba(0,0,0,0.5); color: #fff; font-family: sans-serif; }
-    
+
     /* Envanter ekranı */
     #inventory-screen {
       display: none;
@@ -31,7 +31,7 @@
       padding: 20px;
       z-index: 100;
     }
-    
+
     .inventory-title {
       text-align: center;
       font-size: 24px;
@@ -39,7 +39,7 @@
       border-bottom: 1px solid #555;
       padding-bottom: 10px;
     }
-    
+
     .inventory-item {
       display: flex;
       justify-content: space-between;
@@ -49,11 +49,11 @@
       border-radius: 5px;
       font-size: 18px;
     }
-    
+
     .inventory-item:hover {
       background: rgba(255, 255, 255, 0.2);
     }
-    
+
     .block-preview {
       width: 30px;
       height: 30px;
@@ -61,7 +61,7 @@
       margin-right: 10px;
       border: 1px solid #666;
     }
-    
+
     .wood-block { background-color: #996633; }
     .stone-block { background-color: #888888; }
     .close-button {
@@ -87,7 +87,7 @@
   <div id="crosshair"></div>
   <div id="hand"></div>
   <div id="block-type">Blok: <span id="current-block">Odun</span> (T ile değiştir)</div>
-  
+
   <!-- Envanter ekranı -->
   <div id="inventory-screen">
     <button class="close-button">&times;</button>
@@ -103,7 +103,7 @@
       </div>
     </div>
   </div>
-  
+
 <script type="module">
 import * as THREE from 'three';
 import { PointerLockControls } from 'PointerLockControls';
@@ -145,15 +145,15 @@ const woodCount = document.getElementById('wood-count');
 const stoneCount = document.getElementById('stone-count');
 let inventoryOpen = false;
 
-function updateInv() { 
-  invDiv.textContent = `Wood: ${inventory.wood} | Stone: ${inventory.stone}`; 
+function updateInv() {
+  invDiv.textContent = `Wood: ${inventory.wood} | Stone: ${inventory.stone}`;
   woodCount.textContent = inventory.wood;
   stoneCount.textContent = inventory.stone;
 }
 
 function toggleInventory() {
   inventoryOpen = !inventoryOpen;
-  
+
   if (inventoryOpen) {
     controls.unlock(); // Ekran kilidini aç
     inventoryScreen.style.display = 'block';
@@ -187,16 +187,16 @@ const blockData = new Map(); // Hangi tip blok olduğunu takip eder
 // Blok oluşturma fonksiyonu
 function createBlock(type, x, y, z) {
   const geometry = new THREE.BoxGeometry(blockSize, blockSize, blockSize);
-  const materialProps = { 
+  const materialProps = {
     color: blockTypes[type].color,
     roughness: 0.8
   };
-  
+
   if (blockTypes[type].transparent) {
     materialProps.transparent = true;
     materialProps.opacity = blockTypes[type].opacity;
   }
-  
+
   const material = new THREE.MeshStandardMaterial(materialProps);
   const cube = new THREE.Mesh(geometry, material);
   cube.position.set(x, y, z);
@@ -221,12 +221,12 @@ for(let x = -worldSize/2; x < worldSize/2; x++) {
       createBlock('SAND', x, -2.5, z);
       continue;
     }
-    
+
     // Rastgele düzlük arazi
     createBlock('GRASS', x, -1.5, z);
     createBlock('DIRT', x, -2.5, z);
     createBlock('STONE', x, -3.5, z);
-    
+
     // Taş kümesi ekle
     if (Math.random() < 0.03 && Math.abs(x) > 5 && Math.abs(z) > 5) {
       // Zemin seviyesinde taş blokları
@@ -234,19 +234,19 @@ for(let x = -worldSize/2; x < worldSize/2; x++) {
       for (let y = 0; y < stoneHeight; y++) {
         createBlock('STONE', x, y - 1.5, z);
       }
-      
+
       // Etrafına rastgele taşlar ekle
       for (let i = 0; i < 3; i++) {
         const offsetX = Math.floor(Math.random() * 3) - 1;
         const offsetZ = Math.floor(Math.random() * 3) - 1;
         if (offsetX === 0 && offsetZ === 0) continue;
-        
+
         if (Math.random() < 0.7) {
           createBlock('STONE', x + offsetX, -1.5, z + offsetZ);
         }
       }
     }
-    
+
     // Ağaç ekle
     if (Math.random() < 0.02 && Math.abs(x) > 8 && Math.abs(z) > 8) {
       const treeHeight = 4 + Math.floor(Math.random() * 3);
@@ -271,15 +271,15 @@ for(let x = -worldSize/2; x < worldSize/2; x++) {
 for (let i = 0; i < 20; i++) {
   const x = Math.floor(Math.random() * worldSize) - worldSize/2;
   const z = Math.floor(Math.random() * worldSize) - worldSize/2;
-  
+
   // Taş kümesi
   if (Math.abs(x) > 5 && Math.abs(z) > 5) {
     const stoneClusterSize = 2 + Math.floor(Math.random() * 3);
-    
+
     for (let j = 0; j < stoneClusterSize; j++) {
       const offsetX = Math.floor(Math.random() * 3) - 1;
       const offsetZ = Math.floor(Math.random() * 3) - 1;
-      
+
       // Taş yüksekliği
       const height = Math.floor(Math.random() * 2);
       for (let y = 0; y <= height; y++) {
@@ -305,7 +305,7 @@ for (let y = 0; y < houseHeight; y++) {
     createBlock('WOOD', x, y, houseZ); // Ön duvar
     createBlock('WOOD', x, y, houseZ + houseLength - 1); // Arka duvar
   }
-  
+
   for (let z = houseZ + 1; z < houseZ + houseLength - 1; z++) {
     createBlock('WOOD', houseX, y, z); // Sol duvar
     createBlock('WOOD', houseX + houseWidth - 1, y, z); // Sağ duvar
@@ -315,9 +315,9 @@ for (let y = 0; y < houseHeight; y++) {
 // Kapı
 for (let y = 1; y < 3; y++) {
   // Kapı boşluğu - bloğu kaldırıyoruz
-  const doorBlock = blocks.find(b => 
-    b.position.x === houseX + Math.floor(houseWidth/2) && 
-    b.position.y === y && 
+  const doorBlock = blocks.find(b =>
+    b.position.x === houseX + Math.floor(houseWidth/2) &&
+    b.position.y === y &&
     b.position.z === houseZ
   );
   if (doorBlock) {
@@ -331,7 +331,7 @@ for (let y = 2; y < 3; y++) {
   // Ön pencere
   createBlock('WATER', houseX + 2, y, houseZ);
   createBlock('WATER', houseX + houseWidth - 3, y, houseZ);
-  
+
   // Yan pencereler
   createBlock('WATER', houseX, y, houseZ + 2);
   createBlock('WATER', houseX, y, houseZ + houseLength - 3);
@@ -376,12 +376,12 @@ function notSolidBlock(blockId) {
 function simpleCollision(pos, cube) {
   // Kapılar için çarpışma olmaması
   if (notSolidBlock(cube.id)) return false;
-  
+
   const halfSize = blockSize / 2;
   return (
     Math.abs(pos.x - cube.position.x) < halfSize + playerWidth * 0.7 &&  // Daha dar çarpışma
     Math.abs(pos.z - cube.position.z) < halfSize + playerWidth * 0.7 &&  // Daha dar çarpışma
-    pos.y - cube.position.y < blockSize && 
+    pos.y - cube.position.y < blockSize &&
     pos.y - cube.position.y > -playerHeight
   );
 }
@@ -400,20 +400,20 @@ function checkCollision(pos) {
 function directionCollision(from, to) {
   const dir = to.clone().sub(from).normalize();
   const distance = from.distanceTo(to);
-  
+
   // Çok küçük hareketlerde çarpışma kontrolü yapmayı atla
   if (distance < 0.01) return false;
-  
+
   const steps = 3; // Hareket yolunda 3 nokta kontrol et
   for (let i = 1; i <= steps; i++) {
     const t = i / steps;
     const testPos = from.clone().lerp(to, t);
-    
+
     if (checkCollision(testPos)) {
       return true;
     }
   }
-  
+
   return false;
 }
 
@@ -433,17 +433,17 @@ document.addEventListener('keydown', e => {
     toggleInventory();
     return;
   }
-  
+
   // Blok tipini değiştir
   if (e.code === 'KeyT') {
     currentBlockType = currentBlockType === 'WOOD' ? 'STONE' : 'WOOD';
     document.getElementById('current-block').textContent = currentBlockType === 'WOOD' ? 'Odun' : 'Taş';
     return;
   }
-  
+
   // Envanter açıkken diğer tuşları devre dışı bırak
   if (inventoryOpen) return;
-  
+
   switch(e.code) {
     case 'KeyW':
     case 'ArrowUp':
@@ -499,34 +499,34 @@ const centerRay = new THREE.Raycaster();
 function placeBlock() {
   if(!controls.isLocked) return;
   centerRay.setFromCamera({x:0,y:0}, camera);
-  const hit = centerRay.intersectObjects(blocks)[0]; 
+  const hit = centerRay.intersectObjects(blocks)[0];
   if(!hit) return;
 
   const hitPoint = hit.point.clone();
   const normal = hit.face.normal.clone();
-  
+
   // Blok pozisyonunu hesapla - doğru yüzey hizalaması için
   const blockPos = new THREE.Vector3();
   blockPos.copy(hitPoint).add(normal.multiplyScalar(0.5));
   blockPos.divideScalar(blockSize).floor().multiplyScalar(blockSize);
-  
+
   // Eğer zeminin üstüne yerleştiriyorsa, y koordinatını düzelt
   // Çünkü zeminde -1.5'teyiz
   if (hit.face.normal.y > 0 && Math.abs(hit.object.position.y - (-1.5)) < 0.1) {
     blockPos.y = -0.5; // Zemin üzerine düzgün yerleştirme
   }
-  
+
   // Oyuncunun tam göğüs ve baş hizasındaki blok yerleşimini engelleme
   const playerPos = controls.getObject().position.clone();
-  
+
   // Oyuncunun göğüs ve baş hizasındaki pozisyonlar
-  if (Math.abs(blockPos.x - playerPos.x) < blockSize/2 && 
-      Math.abs(blockPos.z - playerPos.z) < blockSize/2 && 
-      blockPos.y > playerPos.y - playerHeight/2 && 
+  if (Math.abs(blockPos.x - playerPos.x) < blockSize/2 &&
+      Math.abs(blockPos.z - playerPos.z) < blockSize/2 &&
+      blockPos.y > playerPos.y - playerHeight/2 &&
       blockPos.y < playerPos.y + 0.2) {
     return;
   }
-  
+
   // Envanterde blok var mı kontrol et ve uygun blok tipini yerleştir
   if (currentBlockType === 'STONE' && inventory.stone > 0) {
     createBlock('STONE', blockPos.x, blockPos.y, blockPos.z);
@@ -543,7 +543,7 @@ function placeBlock() {
 document.addEventListener('mousedown', e => {
   if(!controls.isLocked) return;
   centerRay.setFromCamera({x:0,y:0}, camera);
-  const hit = centerRay.intersectObjects(blocks)[0]; 
+  const hit = centerRay.intersectObjects(blocks)[0];
   if(!hit) return;
 
   if(e.button === 0) { // Sol tık - blok kırma
@@ -551,13 +551,13 @@ document.addEventListener('mousedown', e => {
     const type = blockData.get(cube.id);
     let hpCount = blockHP.get(cube.id) || 0;
     hpCount--;
-    
+
     if(hpCount <= 0) {
       scene.remove(cube);
       blocks.splice(blocks.indexOf(cube), 1);
       blockHP.delete(cube.id);
       blockData.delete(cube.id);
-      
+
       // Add to inventory based on block type
       if (type === 'WOOD' || type === 'LEAVES') {
         inventory.wood++;
@@ -593,11 +593,11 @@ function animate() {
 
     // Önceki pozisyonu saklayalım
     const oldPos = controls.getObject().position.clone();
-    
+
     // Dikey hareket
     const newPosY = oldPos.clone();
     newPosY.y += velocity.y * delta;
-    
+
     // Dikey çarpışma kontrolü
     if (!checkCollision(newPosY)) {
       controls.getObject().position.y = newPosY.y;
@@ -631,29 +631,29 @@ function animate() {
     // Horizontal movement - hızlı hareket
     const speed = 8; // Daha da hızlı hareket
     const direction = new THREE.Vector3();
-    
+
     // Basılan hareket tuşlarına göre yön vektörünü oluştur
     if (move.forward) direction.z -= 1;
     if (move.backward) direction.z += 1;
     if (move.left) direction.x -= 1;
     if (move.right) direction.x += 1;
-    
+
     // Eğer herhangi bir hareket tuşuna basıldıysa
     if (direction.x !== 0 || direction.z !== 0) {
       // Yön vektörünü normalize et
       direction.normalize();
-      
+
       // Yönü kamera açısına göre döndür
       direction.applyQuaternion(controls.getObject().quaternion);
-      
+
       // Hızı uygula
       direction.multiplyScalar(speed * delta);
-      
+
       // Hedef pozisyon
       const targetPos = controls.getObject().position.clone();
       targetPos.x += direction.x;
       targetPos.z += direction.z;
-      
+
       // Tek adımda çarpışma kontrolü
       if (!directionCollision(controls.getObject().position, targetPos)) {
         controls.getObject().position.copy(targetPos);
@@ -670,7 +670,7 @@ function animate() {
             }
           }
         }
-        
+
         if (canPass) {
           // Eğer kapıdan geçebiliyorsak, geç
           controls.getObject().position.copy(targetPos);
@@ -681,7 +681,7 @@ function animate() {
           if (!checkCollision(xPos)) {
             controls.getObject().position.x = xPos.x;
           }
-          
+
           // Z ekseninde deneme
           const zPos = controls.getObject().position.clone();
           zPos.z += direction.z;
@@ -691,7 +691,7 @@ function animate() {
         }
       }
     }
-    
+
     // Hitbox görselleştirmesini güncelleme
     playerHitbox.position.copy(controls.getObject().position);
     playerHitbox.position.y -= playerHeight/2;
@@ -699,7 +699,7 @@ function animate() {
 
   // Dünya sınırları kontrolü - oyuncunun dünya dışına çıkmasını engeller
   const worldBoundary = (worldSize/2) * blockSize;
-  
+
   if (controls.getObject().position.x < -worldBoundary) {
     controls.getObject().position.x = -worldBoundary + playerWidth;
   }
